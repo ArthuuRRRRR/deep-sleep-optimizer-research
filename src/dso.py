@@ -34,15 +34,26 @@ class DSO:
     def mean_position(self, population):
         return np.mean(population, axis=0)
 
-    def sleep_phase(self, value):
-        return value * np.exp(-1 / self.sleep)
+    def sleep_phase(self, H0, t, t0=0):
+        return H0 * np.exp((t0 - t) / self.sleep)
     
-    def wake_phase(self, value, threshold):
-        return threshold + (value - threshold) * np.exp(-1 / self.wake)
+    def wake_phase(self, H0, mu, t, t0=0):
+        return mu + (H0 - mu) * np.exp((t0 - t) / self.wake)
     
-    def homeostatic_init(self, population, agent, X_best):
+    def compute_mu(self, iteration):
+        max_iter = self.max_eval / self.pop_size
+        progress = iteration / max_iter
+
+        H_min, H_max = self.homeostatic_limits(iteration)
+        circadian_effect = (H_max + H_min) / 2
+
+        mu = (1 - progress) + 0.1 * circadian_effect
+        return np.clip(mu, 0.0, 1.0)
+
+    def homeostatic_init(self, population, agent, X_best, iteration):
         X_mean = self.mean_position(population)
-        mu = self.random_gen.uniform(0, 1)
+        #mu = self.random_gen.uniform(0, 1)
+        mu = self.compute_mu(iteration)
         r = self.random_gen.uniform(0, 1, self.dim)
 
         H_0 = agent + r * (X_best - mu * X_mean)
@@ -62,11 +73,15 @@ class DSO:
         H_min, H_max = self.homeostatic_limits(iteration)
         return self.random_gen.uniform(H_min, H_max)
 
-    def apply_sleep_or_wake(self, H_0, mu, threshold):
+    def apply_sleep_or_wake(self, H_0, mu, iteration):
+        #H_min, H_max = self.homeostatic_limits(iteration)
         if mu < 0.5:
-            return self.sleep_phase(H_0)
+            candidate = self.sleep_phase(H_0, iteration)
         else:
-            return self.wake_phase(H_0, threshold)
+            candidate = self.wake_phase(H_0, mu, iteration)
+
+        candidate = np.clip(candidate, self.lb, self.ub)
+        return candidate
 
     def evaluate_candidate(self, position):
         repaired_position = np.clip(position, self.lb, self.ub)
@@ -85,10 +100,10 @@ class DSO:
 
             agent = self.population[agent_index]
 
-            H_0, mu = self.homeostatic_init(self.population,agent,self.best_position)
+            H_0, mu = self.homeostatic_init(self.population,agent,self.best_position,iteration)
 
-            threshold = self.generate_threshold(iteration)
-            candidate_position = self.apply_sleep_or_wake(H_0,mu,threshold)
+            #threshold = self.generate_threshold(iteration)
+            candidate_position = self.apply_sleep_or_wake(H_0,mu,iteration)
             candidate_fitness, repaired_candidate = self.evaluate_candidate(candidate_position)
 
             self.evaluations_used += 1
