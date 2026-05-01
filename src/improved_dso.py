@@ -18,7 +18,12 @@ class DSO_Improved(DSO):
         else:
             candidate = self.wake_phase(H_0, mu, iteration)
 
-        noise = self.random_gen.normal(0.0, 1.0, self.dim)
-        candidate = candidate + mu * 0.1 * noise
+        progress = min(1.0, self.evaluations_used / self.max_eval)
 
-        return np.clip(candidate, self.lb, self.ub)
+        if progress < 0.6:
+            sigma = 0.001 * (self.ub - self.lb) * (1.0 - progress)
+            noise = self.random_gen.normal(0.0, sigma, self.dim)
+            candidate = candidate + mu * noise
+
+        #return np.clip(candidate, self.lb, self.ub)
+        return candidate

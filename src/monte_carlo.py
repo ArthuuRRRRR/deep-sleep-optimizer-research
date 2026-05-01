@@ -21,7 +21,7 @@ def monte_carlo_DSO(dim=30, population_size=30, max_eval=1000,lower_bound=None, 
 
         best_position, best_fitness, history = simple_DSO(dim,population_size,max_eval,lower_bound,upper_bound,objective_function,seed)
 
-        resultats.append({"run_id": run + 1,"seed": seed,"best_final": best_fitness,"history": history})
+        resultats.append({"run_id": run + 1,"seed": seed,"best_final": best_fitness,"history": history, "best_position": best_position})
 
         #print(f"Run {run + 1} | best={best_fitness}")
 
@@ -44,8 +44,23 @@ def monte_carlo_DSO_improved(dim=30, population_size=30, max_eval=1000,lower_bou
 
         best_position, best_fitness, history = simple_DSO_improved(dim,population_size,max_eval,lower_bound,upper_bound,objective_function,seed, penalty_weight)
 
-        resultats.append({"run_id": run + 1,"seed": seed,"best_final": best_fitness,"history": history})
+        resultats.append({"run_id": run + 1,"seed": seed,"best_final": best_fitness,"history": history, "best_position": best_position})
 
         #print(f"Run {run + 1} | best={best_fitness}")
 
     return resultats
+
+
+def save_results(results, filename):
+    data = []
+
+    for r in results:
+        data.append({
+            "run_id": r["run_id"],
+            "seed": r["seed"],
+            "best_final": r["best_final"],
+            "best_position": r["best_position"]
+        })
+
+    df = pd.DataFrame(data)
+    df.to_csv(filename, index=False)
