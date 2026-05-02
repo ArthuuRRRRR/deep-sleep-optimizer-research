@@ -10,7 +10,7 @@ def simple_DSO(dim, population_size, max_eval, lower_bound, upper_bound,objectiv
 
     best_position, best_fitness, history, eval_history, evals = dso.run()
 
-    return best_position, best_fitness, history
+    return best_position, best_fitness, history, eval_history, evals
 
 def monte_carlo_DSO(dim=30, population_size=30, max_eval=1000,lower_bound=None, upper_bound=None,objective_function=None, n_runs=20, seed_depart=42):
 
@@ -19,9 +19,9 @@ def monte_carlo_DSO(dim=30, population_size=30, max_eval=1000,lower_bound=None, 
     for run in range(n_runs):
         seed = seed_depart + run
 
-        best_position, best_fitness, history = simple_DSO(dim,population_size,max_eval,lower_bound,upper_bound,objective_function,seed)
+        best_position, best_fitness, history, eval_history, evals = simple_DSO(dim,population_size,max_eval,lower_bound,upper_bound,objective_function,seed)
 
-        resultats.append({"run_id": run + 1,"seed": seed,"best_final": best_fitness,"history": history, "best_position": best_position})
+        resultats.append({"run_id": run + 1,"seed": seed,"best_final": best_fitness,"history": history, "eval_history": eval_history, "evals": evals, "best_position": best_position, "budget_used": evals})
 
         #print(f"Run {run + 1} | best={best_fitness}")
 
@@ -33,7 +33,7 @@ def simple_DSO_improved(dim, population_size, max_eval, lower_bound, upper_bound
 
     best_position, best_fitness, history, eval_history, evals = dso.run()
 
-    return best_position, best_fitness, history
+    return best_position, best_fitness, history, eval_history, evals
 
 def monte_carlo_DSO_improved(dim=30, population_size=30, max_eval=1000,lower_bound=None, upper_bound=None,objective_function=None, n_runs=20, seed_depart=42, penalty_weight=10.0):
 
@@ -42,9 +42,9 @@ def monte_carlo_DSO_improved(dim=30, population_size=30, max_eval=1000,lower_bou
     for run in range(n_runs):
         seed = seed_depart + run
 
-        best_position, best_fitness, history = simple_DSO_improved(dim,population_size,max_eval,lower_bound,upper_bound,objective_function,seed, penalty_weight)
+        best_position, best_fitness, history, eval_history, evals = simple_DSO_improved(dim,population_size,max_eval,lower_bound,upper_bound,objective_function,seed, penalty_weight)
 
-        resultats.append({"run_id": run + 1,"seed": seed,"best_final": best_fitness,"history": history, "best_position": best_position})
+        resultats.append({"run_id": run + 1,"seed": seed,"best_final": best_fitness,"history": history, "eval_history": eval_history, "evals": evals, "best_position": best_position, "budget_used": evals})
 
         #print(f"Run {run + 1} | best={best_fitness}")
 
@@ -59,7 +59,11 @@ def save_results(results, filename):
             "run_id": r["run_id"],
             "seed": r["seed"],
             "best_final": r["best_final"],
-            "best_position": r["best_position"]
+            "best_position": r["best_position"],
+            "eval_history": r["eval_history"],
+            "evals": r["evals"],
+            "budget_used": r["budget_used"],
+            "history": r["history"]
         })
 
     df = pd.DataFrame(data)

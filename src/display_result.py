@@ -2,60 +2,67 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def compute_median_q1_q3(results):
-    histories = [r["history"] for r in results]
+def compute_median_q1_q3_from_histories(results):
+    histories = [np.array(r["history"], dtype=float) for r in results]
     min_len = min(len(h) for h in histories)
 
-    histories = np.array([h[:min_len] for h in histories], dtype=float)
+    trimmed = np.array([h[:min_len] for h in histories], dtype=float)
 
-    median = np.median(histories, axis=0)
-    q1 = np.percentile(histories, 25, axis=0)
-    q3 = np.percentile(histories, 75, axis=0)
+    median = np.median(trimmed, axis=0)
+    q1 = np.percentile(trimmed, 25, axis=0)
+    q3 = np.percentile(trimmed, 75, axis=0)
 
-    return median, q1, q3
+    return median, q1, q3, min_len
 
 
-def plot_convergence(results_1, results_2, label_1="DSO", label_2="DSO Improved"):
-    median_1, q1_1, q3_1 = compute_median_q1_q3(results_1)
-    median_2, q1_2, q3_2 = compute_median_q1_q3(results_2)
+def plot_convergence_vs_budget(results_1, results_2, label_1="DSO", label_2="DSO Improved"):
+    median_1, q1_1, q3_1, min_len_1 = compute_median_q1_q3_from_histories(results_1)
+    median_2, q1_2, q3_2, min_len_2 = compute_median_q1_q3_from_histories(results_2)
 
-    min_len = min(len(median_1), len(median_2))
-    generations = range(min_len)
+    min_len = min(min_len_1, min_len_2)
 
-    median_1, q1_1, q3_1 = median_1[:min_len], q1_1[:min_len], q3_1[:min_len]
-    median_2, q1_2, q3_2 = median_2[:min_len], q1_2[:min_len], q3_2[:min_len]
+    x1 = np.array(results_1[0]["eval_history"][:min_len], dtype=float)
+    x2 = np.array(results_2[0]["eval_history"][:min_len], dtype=float)
 
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(10, 5))
 
-    plt.plot(generations, median_1, label=label_1, linewidth=2)
-    plt.fill_between(generations, q1_1, q3_1, alpha=0.2)
+    plt.plot(x1, median_1[:min_len], label=label_1, linewidth=2)
+    plt.fill_between(x1, q1_1[:min_len], q3_1[:min_len], alpha=0.2)
 
-    plt.plot(generations, median_2, label=label_2, linewidth=2)
-    plt.fill_between(generations, q1_2, q3_2, alpha=0.2)
+    plt.plot(x2, median_2[:min_len], label=label_2, linewidth=2)
+    plt.fill_between(x2, q1_2[:min_len], q3_2[:min_len], alpha=0.2)
 
-    plt.yscale("log")
-    plt.xlabel("Itérations")
+    all_vals = np.concatenate([median_1[:min_len], median_2[:min_len]])
+    if np.all(all_vals > 0):
+        plt.yscale("log")
+
+    plt.xlabel("Budget utilisé (nombre d'évaluations)")
     plt.ylabel("Meilleure fitness")
-    plt.title("Courbe de convergence")
+    plt.title("Convergence en fonction du budget")
     plt.legend()
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.show()
 
+def plot_final_positions_2d(results_1, results_2, label_1="DSO", label_2="DSO Improved"):
+    positions_1 = np.array([r["best_position"] for r in results_1], dtype=float)
+    positions_2 = np.array([r["best_position"] for r in results_2], dtype=float)
 
-def plot_boxplot(results_1, results_2, label_1="DSO", label_2="DSO Improved"):
-    values_1 = [r["best_final"] for r in results_1]
-    values_2 = [r["best_final"] for r in results_2]
+    if positions_1.shape[1] < 2 or positions_2.shape[1] < 2:
+        print("Impossible de tracer les positions 2D : dimension < 2.")
+        return
 
-    plt.figure(figsize=(7, 5))
-    plt.boxplot([values_1, values_2], labels=[label_1, label_2])
+    plt.figure(figsize=(7, 6))
+    plt.scatter(positions_1[:, 0], positions_1[:, 1], label=label_1, alpha=0.7)
+    plt.scatter(positions_2[:, 0], positions_2[:, 1], label=label_2, alpha=0.7)
 
-    plt.ylabel("Fitness finale")
-    plt.title("Comparaison des performances finales")
+    plt.xlabel("x1")
+    plt.ylabel("x2")
+    plt.title("Positions finales des meilleures solutions")
+    plt.legend()
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.show()
-
 
 def plot_violin(results_1, results_2, label_1="DSO", label_2="DSO Improved"):
     values_1 = [r["best_final"] for r in results_1]
@@ -82,25 +89,71 @@ def plot_violin(results_1, results_2, label_1="DSO", label_2="DSO Improved"):
     plt.tight_layout()
     plt.show()
 
+def plot_function_contour_with_positions(objective_function, lower_bound, upper_bound, results_1, results_2,dim=30, label_1="DSO", label_2="DSO Improved"):
+    if dim < 2:
+        print("Impossible de tracer un contour 2D : dimension < 2.")
+        return
 
-def plot_sorted_final_scores(results_1, results_2, label_1="DSO", label_2="DSO Improved"):
-    values_1 = sorted([r["best_final"] for r in results_1])
-    values_2 = sorted([r["best_final"] for r in results_2])
+    x = np.linspace(lower_bound, upper_bound, 100)
+    y = np.linspace(lower_bound, upper_bound, 100)
+    X, Y = np.meshgrid(x, y)
+    Z = np.zeros_like(X)
 
-    plt.figure(figsize=(9, 5))
-    plt.plot(values_1, marker="o", linewidth=1.5, label=label_1)
-    plt.plot(values_2, marker="o", linewidth=1.5, label=label_2)
+    point = np.zeros(dim)
 
-    plt.xlabel("Run trié")
-    plt.ylabel("Fitness finale")
-    plt.title("Scores finaux triés")
-    plt.grid(True, alpha=0.3)
+    for i in range(X.shape[0]):
+        for j in range(X.shape[1]):
+            point[:] = 0.0
+            point[0] = X[i, j]
+            point[1] = Y[i, j]
+            Z[i, j] = objective_function(point)
+
+    positions_1 = np.array([r["best_position"] for r in results_1], dtype=float)
+    positions_2 = np.array([r["best_position"] for r in results_2], dtype=float)
+
+    plt.figure(figsize=(8, 6))
+    plt.contour(X, Y, Z, levels=30)
+    #plt.scatter(positions_1[:, 0], positions_1[:, 1], label=label_1, alpha=0.7)
+    #plt.scatter(positions_2[:, 0], positions_2[:, 1], label=label_2, alpha=0.7)
+    plt.scatter(positions_1[:, 0],positions_1[:, 1],label=label_1,alpha=0.7,s=80,marker="o",facecolors="none",edgecolors="blue")
+
+    plt.scatter(positions_2[:, 0],positions_2[:, 1],label=label_2,alpha=0.7,s=50,marker="x",color="orange")
+
+    plt.xlabel("x1")
+    plt.ylabel("x2")
+    plt.title("Contour de la fonction et solutions finales")
     plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+
+def plot_some_run_histories(results, label="DSO", max_runs=5):
+    plt.figure(figsize=(10, 5))
+
+    for i, r in enumerate(results[:max_runs]):
+        x = np.array(r["eval_history"], dtype=float)
+        y = np.array(r["history"], dtype=float)
+        plt.plot(x, y, linewidth=1.2, alpha=0.8, label=f"{label} run {i+1}")
+
+    all_vals = []
+    for r in results[:max_runs]:
+        all_vals.extend(r["history"])
+
+    all_vals = np.array(all_vals, dtype=float)
+    if np.all(all_vals > 0):
+        plt.yscale("log")
+
+    plt.xlabel("Budget utilisé (FEs)")
+    plt.ylabel("Meilleure fitness")
+    plt.title(f"Quelques trajectoires de convergence - {label}")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.show()
 
 
-def print_summary(results, algo_name="DSO"):
+
+def print_summary(results, algo_name="DSO",):
     values = np.array([r["best_final"] for r in results], dtype=float)
 
     print(f"\n--- Résumé {algo_name} ---")
@@ -114,11 +167,15 @@ def print_summary(results, algo_name="DSO"):
     print("Maximum :", np.max(values))
 
 
-def analyze_results(results_1, results_2, label_1="DSO", label_2="DSO Improved"):
+def analyze_results(results_1,results_2,label_1="DSO",label_2="DSO Improved",objective_function=None,lower_bound=None,upper_bound=None,dim=30):
     print_summary(results_1, label_1)
     print_summary(results_2, label_2)
 
-    plot_convergence(results_1, results_2, label_1, label_2)
-    plot_boxplot(results_1, results_2, label_1, label_2)
     plot_violin(results_1, results_2, label_1, label_2)
-    plot_sorted_final_scores(results_1, results_2, label_1, label_2)
+    plot_convergence_vs_budget(results_1, results_2, label_1, label_2)
+    plot_some_run_histories(results_1, label=label_1, max_runs=5)
+    plot_some_run_histories(results_2, label=label_2, max_runs=5)
+    plot_final_positions_2d(results_1, results_2, label_1, label_2)
+
+    if objective_function is not None and lower_bound is not None and upper_bound is not None:
+        plot_function_contour_with_positions(objective_function,lower_bound,upper_bound,results_1,results_2,dim=dim,label_1=label_1,label_2=label_2)

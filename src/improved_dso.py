@@ -7,6 +7,16 @@ class DSO_Improved(DSO):
     def __init__(self, *args, penalty_weight=10.0, **kwargs):
         super().__init__(*args, **kwargs)
         self.penalty_weight = penalty_weight
+    
+    def compute_mu(self, iteration):
+        max_iter = self.max_eval / self.pop_size
+        progress = iteration / max_iter
+
+        H_min, H_max = self.homeostatic_limits(iteration)
+        circadian_effect = (H_max + H_min) / 2
+
+        mu = (1 - progress) + 0.1 * circadian_effect
+        return np.clip(mu, 0.0, 1.0)
 
     def evaluate_candidate(self, position):
         fitness_value, repaired_position = fitness_function(self.objective_function,position,self.lb,self.ub,self.penalty_weight)

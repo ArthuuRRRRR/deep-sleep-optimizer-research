@@ -41,14 +41,15 @@ class DSO:
         return mu + (H0 - mu) * np.exp((t0 - t) / self.wake)
     
     def compute_mu(self, iteration):
-        max_iter = self.max_eval / self.pop_size
-        progress = iteration / max_iter
+        #max_iter = self.max_eval / self.pop_size
+        #progress = iteration / max_iter
 
-        H_min, H_max = self.homeostatic_limits(iteration)
-        circadian_effect = (H_max + H_min) / 2
+        #H_min, H_max = self.homeostatic_limits(iteration)
+        #circadian_effect = (H_max + H_min) / 2
 
-        mu = (1 - progress) + 0.1 * circadian_effect
-        return np.clip(mu, 0.0, 1.0)
+        #mu = (1 - progress) + 0.1 * circadian_effect
+        #return np.clip(mu, 0.0, 1.0)
+        return float(self.random_gen.uniform(0.0, 1.0))
 
     def homeostatic_init(self, population, agent, X_best, iteration):
         X_mean = self.mean_position(population)
