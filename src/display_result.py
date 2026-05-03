@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import wilcoxon
 
 
 def compute_median_q1_q3_from_histories(results):
@@ -166,12 +167,52 @@ def print_summary(results, algo_name="DSO",):
     print("Q3 :", np.percentile(values, 75))
     print("Maximum :", np.max(values))
 
+def statistical_test(results_1, results_2, label_1="DSO", label_2="DSO Improved", alpha=0.05):
+    values_1 = np.array([r["best_final"] for r in results_1], dtype=float)
+    values_2 = np.array([r["best_final"] for r in results_2], dtype=float)
+
+    differences = values_2 - values_1  # positif = Improved est pire, car minimisation
+
+    wins = np.sum(values_2 < values_1)
+    losses = np.sum(values_2 > values_1)
+    ties = np.sum(np.isclose(values_2, values_1))
+
+    print("\n--- Test statistique Wilcoxon apparié ---")
+    print(f"Comparaison : {label_1} vs {label_2}")
+    print("Hypothèse nulle H0 : pas de différence significative entre les deux versions.")
+    print("Hypothèse alternative H1 : différence significative entre les deux versions.")
+    print("Nombre de victoires Improved :", wins)
+    print("Nombre de défaites Improved :", losses)
+    print("Nombre d'égalités :", ties)
+    print("Différence médiane Improved - Original :", np.median(differences))
+
+    if np.allclose(differences, 0.0):
+        print("Test Wilcoxon non applicable : toutes les différences sont nulles ou quasi nulles.")
+        print("Conclusion : aucune différence observable entre les deux versions.")
+        return None
+
+    stat, p_value = wilcoxon(values_2, values_1, alternative="two-sided", zero_method="zsplit")
+
+    print("Statistique W :", stat)
+    print("p-value :", p_value)
+
+    if p_value < alpha:
+        print(f"Conclusion : différence statistiquement significative au seuil alpha={alpha}.")
+        if np.median(differences) < 0:
+            print(f"Interprétation : {label_2} est significativement meilleur en médiane.")
+        else:
+            print(f"Interprétation : {label_2} est significativement moins bon en médiane.")
+    else:
+        print(f"Conclusion : différence non significative au seuil alpha={alpha}.")
+
+    return stat, p_value
+
 
 def analyze_results(results_1,results_2,label_1="DSO",label_2="DSO Improved",objective_function=None,lower_bound=None,upper_bound=None,dim=30):
     print_summary(results_1, label_1)
     print_summary(results_2, label_2)
 
-    plot_violin(results_1, results_2, label_1, label_2)
+    #plot_violin(results_1, results_2, label_1, label_2)
     plot_convergence_vs_budget(results_1, results_2, label_1, label_2)
     plot_some_run_histories(results_1, label=label_1, max_runs=5)
     plot_some_run_histories(results_2, label=label_2, max_runs=5)
@@ -179,3 +220,4 @@ def analyze_results(results_1,results_2,label_1="DSO",label_2="DSO Improved",obj
 
     if objective_function is not None and lower_bound is not None and upper_bound is not None:
         plot_function_contour_with_positions(objective_function,lower_bound,upper_bound,results_1,results_2,dim=dim,label_1=label_1,label_2=label_2)
+    statistical_test(results_1, results_2, label_1, label_2, alpha=0.05)
