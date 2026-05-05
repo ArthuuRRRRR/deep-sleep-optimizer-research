@@ -19,36 +19,29 @@ class DSO:
         self.H_plus = 1.0
         self.H_minus = 0.0
 
-    def init_population(self):
+    def init_population(self): # init de la popu de manière aléatoire dans les bornes
         return self.random_gen.uniform(self.lb, self.ub, (self.pop_size, self.dim))
 
-    def evaluate(self, position):
+    def evaluate(self, position): # appel fonction objective mais pas de pénalité
         return self.objective_function(position)
     
-    def evaluate_population(self, population):
+    def evaluate_population(self, population): # permet evaluer tt population en 1 fois
         fitness_values = []
         for agent_position in population:
             fitness_values.append(self.evaluate(agent_position))
-        return np.array(fitness_values, dtype=float)
+        return np.array(fitness_values, dtype=float) 
 
     def mean_position(self, population):
-        return np.mean(population, axis=0)
+        return np.mean(population, axis=0) # calcul de la position moyenne de la population
 
     def sleep_phase(self, H0, t, t0=0):
-        return H0 * np.exp((t0 - t) / self.sleep)
+        return H0 * np.exp((t0 - t) / self.sleep) # respecte formule TPM pour sleep
     
-    def wake_phase(self, H0, mu, t, t0=0):
+    def wake_phase(self, H0, mu, t, t0=0): # respecte formule TPM pour wake
         return mu + (H0 - mu) * np.exp((t0 - t) / self.wake)
     
-    def compute_mu(self, iteration):
-        #max_iter = self.max_eval / self.pop_size
-        #progress = iteration / max_iter
+    def compute_mu(self, iteration): # simple mu aléatoire
 
-        #H_min, H_max = self.homeostatic_limits(iteration)
-        #circadian_effect = (H_max + H_min) / 2
-
-        #mu = (1 - progress) + 0.1 * circadian_effect
-        #return np.clip(mu, 0.0, 1.0)
         return float(self.random_gen.uniform(0.0, 1.0))
 
     def homeostatic_init(self, population, agent, X_best, iteration):
@@ -74,7 +67,7 @@ class DSO:
         H_min, H_max = self.homeostatic_limits(iteration)
         return self.random_gen.uniform(H_min, H_max)
 
-    def apply_sleep_or_wake(self, H_0, mu, iteration):
+    def apply_sleep_or_wake(self, H_0, mu, iteration): # choix de phase selon mu
         #H_min, H_max = self.homeostatic_limits(iteration)
         if mu < 0.5:
             candidate = self.sleep_phase(H_0, iteration)
@@ -84,17 +77,17 @@ class DSO:
         candidate = np.clip(candidate, self.lb, self.ub)
         return candidate
 
-    def evaluate_candidate(self, position):
+    def evaluate_candidate(self, position): # évaluation simple sans pénalité
         repaired_position = np.clip(position, self.lb, self.ub)
         fitness_value = self.evaluate(repaired_position)
         return fitness_value, repaired_position
 
-    def update_best_solution(self):
+    def update_best_solution(self): # mise à jour meilleure solution trouvée
         best_index = int(np.argmin(self.fitness_values))
         self.best_position = self.population[best_index].copy()
         self.best_fitness = float(self.fitness_values[best_index])
 
-    def update_population(self, iteration):
+    def update_population(self, iteration):  # MAJ de la population à chaque itération
         for agent_index in range(self.pop_size):
             if self.evaluations_used >= self.max_eval:
                 break
@@ -117,7 +110,7 @@ class DSO:
                     self.best_position = repaired_candidate.copy()
                     self.best_fitness = float(candidate_fitness)
 
-    def run(self):
+    def run(self): # boucle principale de l algo
         self.population = self.init_population()
         self.fitness_values = self.evaluate_population(self.population)
         self.evaluations_used = self.pop_size

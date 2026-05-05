@@ -8,7 +8,7 @@ class DSO_Improved(DSO):
         super().__init__(*args, **kwargs)
         self.penalty_weight = penalty_weight
     
-    def compute_mu(self, iteration):
+    def compute_mu(self, iteration): # modification de mu pour etre actif au debut (+ d exploration) et moins à la fin avec un effet circadien
         max_iter = self.max_eval / self.pop_size
         progress = iteration / max_iter
 
@@ -18,11 +18,11 @@ class DSO_Improved(DSO):
         mu = (1 - progress) + 0.1 * circadian_effect
         return np.clip(mu, 0.0, 1.0)
 
-    def evaluate_candidate(self, position):
+    def evaluate_candidate(self, position): # modification de l'evaluation pour inclure une pénalité en cas de violation des contraintes
         fitness_value, repaired_position = fitness_function(self.objective_function,position,self.lb,self.ub,self.penalty_weight)
         return fitness_value, repaired_position
 
-    def apply_sleep_or_wake(self, H_0, mu, iteration):
+    def apply_sleep_or_wake(self, H_0, mu, iteration): #inclusion de bruit au début pour favoriser exploration
         if mu < 0.5:
             candidate = self.sleep_phase(H_0, iteration)
         else:
@@ -34,6 +34,4 @@ class DSO_Improved(DSO):
             sigma = 0.001 * (self.ub - self.lb) * (1.0 - progress)
             noise = self.random_gen.normal(0.0, sigma, self.dim)
             candidate = candidate + mu * noise
-
-        #return np.clip(candidate, self.lb, self.ub)
         return candidate
